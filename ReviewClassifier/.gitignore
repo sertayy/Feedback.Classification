@@ -3,4 +3,4 @@ venv
 
 reviews.txt
 reviews.pickle
-classified_reviews.json
+*.json
