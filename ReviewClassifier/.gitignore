@@ -1,6 +1,5 @@
 .idea
 venv
-
-reviews.txt
-reviews.pickle
-*.json
+old_files
+output
+__pycache__
