@@ -1,6 +1,6 @@
 .idea
 venv
 
-reviews.txt
-reviews.pickle
+*.txt
+*.pickle
 *.json
