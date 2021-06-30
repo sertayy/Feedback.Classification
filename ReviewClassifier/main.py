@@ -55,7 +55,7 @@ def train_model(df, k_fold_step):
     model = ClassificationModel(
         "bert",
         "dbmdz/bert-base-turkish-cased",
-        use_cuda=True,
+        use_cuda=False,
         args=model_args,
         num_labels=4
     )
@@ -65,6 +65,7 @@ def train_model(df, k_fold_step):
 
 def test_model(trained_model, test_df):
     labels_dict = {0: 'bug report', 1: 'feature request', 2: 'ratings', 3: 'user experience'}
+    # olcay'ınki labels_dict = {0: 'ratings', 1: 'user experience', 2: 'feature request', 3: 'bug report'}
     bug_predict = {
         "bug report": 0,
         "user experience": 0,
@@ -138,7 +139,7 @@ def k_fold(df: pd.DataFrame):
             categ_values = categ_df.values
             piece = int(len(categ_values) / K_FOLD)
             training = np.concatenate(
-                (categ_values[:len(categ_values) - piece * (i+1), :], categ_values[len(categ_values) - piece*i, :]))
+                (categ_values[:len(categ_values) - piece * (i+1), :], categ_values[len(categ_values) - piece*i:, :]))
             test = categ_values[len(categ_values) - piece * (i+1):len(categ_values) - piece*i, :]
             train_df = train_df.append(DataFrame(training, columns=categ_df.columns), ignore_index=True)
             test_df = test_df.append(DataFrame(test, columns=categ_df.columns), ignore_index=True)

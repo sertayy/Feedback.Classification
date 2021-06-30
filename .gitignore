@@ -4,3 +4,5 @@ old_files
 output
 __pycache__
 *.DS_Store
+cache_dir
+runs
