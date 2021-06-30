@@ -128,3 +128,7 @@ wcwidth==0.2.5
 webencodings==0.5.1
 widgetsnbextension==3.5.1
 xxhash==2.0.2
+
+statsmodels~=0.12.2
+nltk~=3.6.2
+snowballstemmer~=2.1.0

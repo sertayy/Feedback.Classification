@@ -10,6 +10,7 @@ import seaborn as sn
 import matplotlib.pyplot as plt
 from sklearn import metrics
 from read_helper import get_data_from_bigquery, read_json, read_config, read_csv
+from preprocess_data import apply_preprocess
 import logging
 
 logging.basicConfig(level=logging.INFO)
@@ -33,7 +34,7 @@ def create_confisuon_matrix():
     plt.show()
 
 
-def train_model(df):
+def train_model(df, k_fold_step):
     df = df.replace("bug report", 0) \
         .replace('feature request', 1) \
         .replace('ratings', 2) \
@@ -58,7 +59,7 @@ def train_model(df):
         args=model_args,
         num_labels=4
     )
-    model.train_model(df, acc=sklearn.metrics.accuracy_score)
+    model.train_model(df, acc=sklearn.metrics.accuracy_score, output_dir=k_fold_step)
     return model
 
 
@@ -141,7 +142,7 @@ def k_fold(df: pd.DataFrame):
             test = categ_values[len(categ_values) - piece * (i+1):len(categ_values) - piece*i, :]
             train_df = train_df.append(DataFrame(training, columns=categ_df.columns), ignore_index=True)
             test_df = test_df.append(DataFrame(test, columns=categ_df.columns), ignore_index=True)
-        trained_model = train_model(train_df)
+        trained_model = train_model(train_df, i)
         test_model(trained_model, test_df)
 
 
