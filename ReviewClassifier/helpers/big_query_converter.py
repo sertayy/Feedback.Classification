@@ -2,7 +2,7 @@ import pickle
 import json
 
 if __name__ == "__main__":
-    with open("reviews_6_6.pickle", "rb") as p:
+    with open("../old_files/reviews_6_6.pickle", "rb") as p:
         reviews_pickle = pickle.load(p)
     berkay = {
         (1, 21): 1,
@@ -208,5 +208,5 @@ if __name__ == "__main__":
             "rating": rat,
             "category": cat
         })
-    with open("big_query_6_6.json", "w") as out:
+    with open("../output/big_query_6_6.json", "w") as out:
         json.dump(son, out, ensure_ascii=False, indent=4)

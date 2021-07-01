@@ -1,5 +1,10 @@
 .idea
-.DS_Store
-*.json
-.ipynb_checkpoints
 venv
+old_files
+output
+__pycache__
+*.DS_Store
+cache_dir
+runs
+*model
+outputs
