@@ -66,7 +66,6 @@ def test_model(trained_model, test_df):
 
 
 def k_fold(df: pd.DataFrame):
-    df = arrange_df(df)
     categories = df['labels'].unique()
     test_df = pd.DataFrame(columns=df.columns)
     train_df = pd.DataFrame(columns=df.columns)
@@ -106,6 +105,7 @@ def use_existing_model(file_path):
     else:
         logger.error(f'File extension "{file_extension}" is not supported! Use .json or .csv files.')
         return
+    test_df = arrange_df(apply_preprocess(test_df))
     if os.path.exists("input/classifier.pt"):
         trained_model = create_model()
         trained_model.model.load_state_dict(torch.load("input/classifier.pt"))
@@ -143,7 +143,7 @@ if __name__ == "__main__":
                 else:
                     logger.error(f'"{config["db_type"]}" is not supported! Use "bigQuery" instead.')
             if df is not None:
-                df = apply_preprocess(df)
+                df = arrange_df(apply_preprocess(df))
                 pred_matrix = k_fold(df)
                 create_confisuon_matrix(pred_matrix)
     else:
