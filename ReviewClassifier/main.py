@@ -8,7 +8,6 @@ from sklearn import metrics
 import os
 import seaborn as sn
 import matplotlib.pyplot as plt
-from sklearn import metrics
 from read_helper import get_data_from_bigquery, read_json, read_config, read_csv
 from preprocess_data import apply_preprocess
 import logging
@@ -19,28 +18,17 @@ K_FOLD = 5
 DB_TYPE = "bigQuery"
 
 
-def create_confisuon_matrix():
-    array = [[74, 19, 14, 8],
-             [40, 175, 37, 64],
-             [6, 22, 65, 7],
-             [5, 29, 9, 204]]
-    df_cm = pd.DataFrame(array, index=[i for i in "BUFR"],
-                         columns=[i for i in "BUFR"])
+def create_confisuon_matrix(conf_matrix):
+    df_cm = pd.DataFrame(conf_matrix, index=[i for i in "BFRU"],
+                         columns=[i for i in "BFRU"])
     plt.figure(figsize=(10, 7))
     sn.heatmap(df_cm, annot=True, fmt='g')
     plt.xlabel("true class")
     plt.ylabel("predicted class")
-    metrics.classification_report()
-    plt.show()
+    plt.savefig('confusion_matrix.png')
 
 
 def train_model(df, k_fold_step):
-    df = df.replace("bug report", 0) \
-        .replace('feature request', 1) \
-        .replace('ratings', 2) \
-        .replace('user experience', 3) \
-        .rename(columns={"review": "text", "category": "labels"})
-
     model_args = {
         "use_early_stopping": True,
         "early_stopping_delta": 0.01,
@@ -55,96 +43,66 @@ def train_model(df, k_fold_step):
     model = ClassificationModel(
         "bert",
         "dbmdz/bert-base-turkish-cased",
-        use_cuda=False,
+        use_cuda=True,
         args=model_args,
         num_labels=4
     )
-    model.train_model(df, acc=sklearn.metrics.accuracy_score, output_dir=k_fold_step)
+    model.train_model(df, acc=sklearn.metrics.accuracy_score, output_dir="model_{0}".format(k_fold_step))
     return model
 
 
 def test_model(trained_model, test_df):
-    labels_dict = {0: 'bug report', 1: 'feature request', 2: 'ratings', 3: 'user experience'}
-    # olcay'ınki labels_dict = {0: 'ratings', 1: 'user experience', 2: 'feature request', 3: 'bug report'}
-    bug_predict = {
-        "bug report": 0,
-        "user experience": 0,
-        "feature request": 0,
-        "ratings": 0
-    }
-    ux_predict = {
-        "bug report": 0,
-        "user experience": 0,
-        "feature request": 0,
-        "ratings": 0
-    }
-    feature_predict = {
-        "bug report": 0,
-        "user experience": 0,
-        "feature request": 0,
-        "ratings": 0
-    }
-    rating_predict = {
-        "bug report": 0,
-        "user experience": 0,
-        "feature request": 0,
-        "ratings": 0
-    }
-
+    pred_matrix = np.zeros((4,4))
     for index, row in test_df.iterrows():
         predictions = trained_model.predict(row["text"])[0]
-        if row["labels"] == 0:
-            bug_predict[labels_dict[predictions[0]]] += 1
-        elif row["labels"] == 3:
-            ux_predict[labels_dict[predictions[0]]] += 1
-        elif row["labels"] == 1:
-            feature_predict[labels_dict[predictions[0]]] += 1
-        else:
-            rating_predict[labels_dict[predictions[0]]] += 1
-
-    print("Bug report predictions:\n"
-          "\tbug report: {0}\n"
-          "\tuser experience: {1}\n"
-          "\tfeature request: {2}\n"
-          "\tratings: {3}".format(bug_predict["bug report"], bug_predict["user experience"],
-                                  bug_predict["feature request"], bug_predict["ratings"]))
-    print("User experience predictions:\n"
-          "\tbug report: {0}\n"
-          "\tuser experience: {1}\n"
-          "\tfeature request: {2}\n"
-          "\tratings: {3}".format(ux_predict["bug report"], ux_predict["user experience"],
-                                  ux_predict["feature request"], ux_predict["ratings"]))
-    print("Feature request predictions:\n"
-          "\tbug report: {0}\n"
-          "\tuser experience: {1}\n"
-          "\tfeature request: {2}\n"
-          "\tratings: {3}".format(feature_predict["bug report"], feature_predict["user experience"],
-                                  feature_predict["feature request"], feature_predict["ratings"]))
-    print("Rating predictions:\n"
-          "\tbug report: {0}\n"
-          "\tuser experience: {1}\n"
-          "\tfeature request: {2}\n"
-          "\tratings: {3}".format(rating_predict["bug report"], rating_predict["user experience"],
-                                  rating_predict["feature request"], rating_predict["ratings"]))
+        pred_matrix[row["labels"]][predictions[0]] += 1
+    return pred_matrix
 
 
 def k_fold(df: pd.DataFrame):
-    df = df.sample(frac=1, random_state=1).reset_index(drop=True)
-    categories = df['category'].unique()
+    df = arrange_df(df)
+    categories = df['labels'].unique()
     test_df = pd.DataFrame(columns=df.columns)
     train_df = pd.DataFrame(columns=df.columns)
+    pred_matrix = np.zeros((4, 4))
     for i in range(K_FOLD):
         for category in categories:
-            categ_df = df[df['category'] == category]
+            categ_df = df[df['labels'] == category]
             categ_values = categ_df.values
             piece = int(len(categ_values) / K_FOLD)
-            training = np.concatenate(
-                (categ_values[:len(categ_values) - piece * (i+1), :], categ_values[len(categ_values) - piece*i:, :]))
-            test = categ_values[len(categ_values) - piece * (i+1):len(categ_values) - piece*i, :]
+            training = np.concatenate((categ_values[:len(categ_values) - piece * (i + 1), :], categ_values[len(categ_values) - piece * i:, :]))
+            test = categ_values[len(categ_values) - piece * (i + 1):len(categ_values) - piece * i, :]
             train_df = train_df.append(DataFrame(training, columns=categ_df.columns), ignore_index=True)
             test_df = test_df.append(DataFrame(test, columns=categ_df.columns), ignore_index=True)
         trained_model = train_model(train_df, i)
-        test_model(trained_model, test_df)
+        conf_matrix = test_model(trained_model, test_df)
+        pred_matrix += conf_matrix
+    pred_matrix /= K_FOLD
+
+
+def arrange_df(df):
+    df = df.sample(frac=1, random_state=1).reset_index(drop=True)
+    df = df.replace("bug report", 0) \
+        .replace('feature request', 1) \
+        .replace('ratings', 2) \
+        .replace('user experience', 3) \
+        .rename(columns={"review": "text", "category": "labels"})
+    return df
+
+
+def use_existing_model(file_path):
+    file_extension = os.path.splitext(file_path)[1]
+    if file_extension == ".json":
+        test_df = read_json(file_path)
+    elif file_extension == ".csv":
+        test_df = read_csv(file_path)
+    else:
+        logger.error(f'File extension "{file_extension}" is not supported! Use .json or .csv files.')
+        return
+    model_df = arrange_df(apply_preprocess(get_data_from_bigquery(config)))
+    trained_model = train_model(model_df, "existing")
+    conf_matrix = test_model(trained_model, test_df)
+    create_confisuon_matrix(conf_matrix)
 
 
 if __name__ == "__main__":
@@ -152,23 +110,27 @@ if __name__ == "__main__":
     if os.path.exists(sys.argv[1]):
         file_path = sys.argv[1]
         config = read_config(sys.argv[1])
-        if not config["is_file"] ^ config["db_connection"]:
-            logger.error("is_file and db_connection parameters are not allowed to be same!")
-        elif config["is_file"]:
-            file_path = config["file_path"]
-            file_extension = os.path.splitext(file_path)[1]
-            if file_extension == ".json":
-                df = read_json(file_path)
-            elif file_extension == ".csv":
-                df = read_csv(file_path)
-            else:
-                logger.error(f'File extension "{file_extension}" is not supported! Use .json or .csv files.')
+        if config["use_existing_model"]:
+            use_existing_model(config["file_path"])
         else:
-            if config["db_type"] == DB_TYPE:
-                df = get_data_from_bigquery(config)
+            if not config["is_file"] ^ config["db_connection"]:
+                logger.error("is_file and db_connection parameters are not allowed to be same!")
+            elif config["is_file"]:
+                file_path = config["file_path"]
+                file_extension = os.path.splitext(file_path)[1]
+                if file_extension == ".json":
+                    df = read_json(file_path)
+                elif file_extension == ".csv":
+                    df = read_csv(file_path)
+                else:
+                    logger.error(f'File extension "{file_extension}" is not supported! Use .json or .csv files.')
             else:
-                logger.error(f'"{config["db_type"]}" is not supported! Use "bigQuery" instead.')
-        if df is not None:
-            k_fold(df)
+                if config["db_type"] == DB_TYPE:
+                    df = get_data_from_bigquery(config)
+                else:
+                    logger.error(f'"{config["db_type"]}" is not supported! Use "bigQuery" instead.')
+            if df is not None:
+                df = apply_preprocess(df)
+                k_fold(df)
     else:
         logger.error(f'Input path {sys.argv[1]} does not exists!')

@@ -1,9 +1,10 @@
 {
   "is_file": true,
-  "file_path": "/Users/apple/Documents/GitHub/Feedback.Classification/ReviewClassifier/input/data.json",
   "db_connection": false,
+  "file_path": "/Users/sertay.akpinar/Documents/GitHub/Feedback.Classification/ReviewClassifier/input/data.json",
+  "use_existing_model": true,
   "db_type": "bigQuery",
-  "key_path": "/Users/apple/Desktop/feedbackclassification-3f1c06ba580d.json",
+  "key_path": "/Users/sertay.akpinar/Desktop/feedbackclassification-3f1c06ba580d.json",
   "project_id": "feedbackclassification",
   "schema_name": "reviews",
   "table_name": "new_classification"

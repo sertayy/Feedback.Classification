@@ -16,7 +16,10 @@ def get_data_from_bigquery(config: Dict[str, T]):
     table = bigquery.TableReference.from_string(
         f'{config["project_id"]}.{config["schema_name"]}.{config["table_name"]}')
     rows = client.list_rows(table)
-    return rows.to_dataframe(bqstorage_client=bqstorageclient)
+    df = rows.to_dataframe(bqstorage_client=bqstorageclient)
+    if "rating" in list(df["category"]):
+        df = df.drop(df[(df.category == 'rating')].index).reset_index(drop=True)
+    return df
 
 
 def read_csv(input_path: str):
