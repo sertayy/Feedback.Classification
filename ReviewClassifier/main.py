@@ -78,6 +78,7 @@ def k_fold(df: pd.DataFrame):
         conf_matrix = test_model(trained_model, test_df)
         pred_matrix += conf_matrix
     pred_matrix /= K_FOLD
+    return pred_matrix
 
 
 def arrange_df(df):
@@ -131,6 +132,7 @@ if __name__ == "__main__":
                     logger.error(f'"{config["db_type"]}" is not supported! Use "bigQuery" instead.')
             if df is not None:
                 df = apply_preprocess(df)
-                k_fold(df)
+                pred_matrix = k_fold(df)
+                create_confisuon_matrix(pred_matrix)
     else:
         logger.error(f'Input path {sys.argv[1]} does not exists!')
