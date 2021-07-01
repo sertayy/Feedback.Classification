@@ -11,6 +11,7 @@ import matplotlib.pyplot as plt
 from read_helper import get_data_from_bigquery, read_json, read_config, read_csv
 from preprocess_data import apply_preprocess
 import logging
+import torch
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -28,7 +29,7 @@ def create_confisuon_matrix(conf_matrix):
     plt.savefig('confusion_matrix.png')
 
 
-def train_model(df, k_fold_step):
+def create_model():
     model_args = {
         "use_early_stopping": True,
         "early_stopping_delta": 0.01,
@@ -47,6 +48,11 @@ def train_model(df, k_fold_step):
         args=model_args,
         num_labels=4
     )
+    return model
+
+
+def train_model(df, k_fold_step):
+    model = create_model()
     model.train_model(df, acc=sklearn.metrics.accuracy_score, output_dir="model_{0}".format(k_fold_step))
     return model
 
@@ -100,8 +106,14 @@ def use_existing_model(file_path):
     else:
         logger.error(f'File extension "{file_extension}" is not supported! Use .json or .csv files.')
         return
-    model_df = arrange_df(apply_preprocess(get_data_from_bigquery(config)))
-    trained_model = train_model(model_df, "existing")
+    if os.path.exists("input/classifier.pt"):
+        trained_model = create_model()
+        trained_model.model.load_state_dict(torch.load("input/classifier.pt"))
+        trained_model.model.eval()
+    else:
+        model_df = arrange_df(apply_preprocess(get_data_from_bigquery(config)))
+        trained_model = train_model(model_df, "existing")
+        torch.save(trained_model.model.state_dict(), "input/classifier.pt")
     conf_matrix = test_model(trained_model, test_df)
     create_confisuon_matrix(conf_matrix)
 
